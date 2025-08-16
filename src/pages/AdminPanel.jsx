@@ -3,10 +3,11 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import SubidaArchivos from '../components/SubidaArchivos'
-
+import SubidaImagenesDiseno from '../components/SubidaImagenesDiseno'
 
 function AdminPanel() {
   const [activeTab, setActiveTab] = useState('dashboard')
+  const [disenosPortafolio, setDisenosPortafolio] = useState([])
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const [clientes, setClientes] = useState([])
@@ -24,10 +25,26 @@ function AdminPanel() {
   const [nuevoProyecto, setNuevoProyecto] = useState({
     cliente_id: '', titulo: '', descripcion: '', mostrar_en_portafolio: false
   })
+  // Estado para diseños de portafolio
+const [nuevoDiseno, setNuevoDiseno] = useState({
+  titulo: '',
+  descripcion: '',
+  categoria: '',
+  año_diseno: new Date().getFullYear(),
+  cliente_tipo: '',
+  mostrar_publico: true,
+  orden_display: 0,
+  tags: []
+})
+
+const [mostrarModalDiseno, setMostrarModalDiseno] = useState(false)
+const [disenoEditando, setDisenoEditando] = useState(null)
+const [modoEdicion, setModoEdicion] = useState(false)
 
   useEffect(() => {
-    fetchData()
-  }, [])
+  fetchData()
+  fetchDisenosPortafolio()
+}, [])
 
   const fetchData = async () => {
     try {
@@ -50,6 +67,104 @@ function AdminPanel() {
       setLoading(false)
     }
   }
+  const fetchDisenosPortafolio = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('portafolio_designs')
+      .select('*')
+      .order('orden_display', { ascending: false })
+
+    if (error) throw error
+    setDisenosPortafolio(data || [])
+  } catch (error) {
+    console.error('Error:', error)
+  }
+}
+const agregarDiseno = async (e) => {
+  e.preventDefault()
+  try {
+    const { error } = await supabase
+      .from('portafolio_designs')
+      .insert([nuevoDiseno])
+
+    if (error) throw error
+
+    setNuevoDiseno({
+      titulo: '',
+      descripcion: '',
+      categoria: '',
+      año_diseno: new Date().getFullYear(),
+      cliente_tipo: '',
+      mostrar_publico: true,
+      orden_display: 0,
+      tags: []
+    })
+    
+    fetchDisenosPortafolio()
+    setMostrarModalDiseno(false)
+    alert('✅ Diseño agregado exitosamente')
+  } catch (error) {
+    console.error('Error:', error)
+    alert('❌ Error al agregar diseño: ' + error.message)
+  }
+}
+const editarDiseno = async (e) => {
+  e.preventDefault()
+  try {
+    const { error } = await supabase
+      .from('portafolio_designs')
+      .update(nuevoDiseno)
+      .eq('id', disenoEditando.id)
+
+    if (error) throw error
+
+    fetchDisenosPortafolio()
+    setMostrarModalDiseno(false)
+    setModoEdicion(false)
+    setDisenoEditando(null)
+    alert('✅ Diseño actualizado exitosamente')
+  } catch (error) {
+    console.error('Error:', error)
+    alert('❌ Error al actualizar diseño: ' + error.message)
+  }
+}
+
+const eliminarDiseno = async (disenoId) => {
+  if (!confirm('¿Estás segura de eliminar este diseño? Esta acción no se puede deshacer.')) {
+    return
+  }
+
+  try {
+    const { error } = await supabase
+      .from('portafolio_designs')
+      .delete()
+      .eq('id', disenoId)
+
+    if (error) throw error
+
+    fetchDisenosPortafolio()
+    alert('✅ Diseño eliminado exitosamente')
+  } catch (error) {
+    console.error('Error:', error)
+    alert('❌ Error al eliminar diseño: ' + error.message)
+  }
+}
+
+const abrirEdicion = (diseno) => {
+  setDisenoEditando(diseno)
+  setNuevoDiseno({
+    titulo: diseno.titulo,
+    descripcion: diseno.descripcion || '',
+    categoria: diseno.categoria,
+    año_diseno: diseno.año_diseno,
+    cliente_tipo: diseno.cliente_tipo || '',
+    mostrar_publico: diseno.mostrar_publico,
+    orden_display: diseno.orden_display || 0,
+    tags: diseno.tags || []
+  })
+  setModoEdicion(true)
+  setMostrarModalDiseno(true)
+}
 
   const agregarCliente = async (e) => {
   e.preventDefault()
@@ -101,6 +216,7 @@ function AdminPanel() {
       alert('❌ Error al agregar proyecto')
     }
   }
+  
 
   const togglePortafolio = async (proyectoId, currentValue) => {
     try {
@@ -185,6 +301,7 @@ function AdminPanel() {
                 { id: 'dashboard', label: '📊 Dashboard', icon: '📊' },
                 { id: 'clientes', label: `👥 Clientes (${clientes.length})`, icon: '👥' },
                 { id: 'proyectos', label: `📐 Proyectos (${proyectos.length})`, icon: '📐' },
+                { id: 'portafolio', label: `🎨 Portafolio (${disenosPortafolio.length})`, icon: '🎨' },
                 { id: 'configuracion', label: '⚙️ Configuración', icon: '⚙️' }
               ].map((tab) => (
                 <button
@@ -488,7 +605,7 @@ function AdminPanel() {
                   </button>
                 </form>
               </div>
-            </div>
+              </div>
               {/* Lista de Proyectos Mejorada */}
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -579,6 +696,133 @@ function AdminPanel() {
               </div>
                         </div>
                       )}
+                      {/* Portafolio Tab */}
+{activeTab === 'portafolio' && (
+  <div className="space-y-8">
+    {/* Header del Portafolio */}
+    <div className="bg-white rounded-xl shadow-lg p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h3 className="text-2xl font-bold text-primary-900 flex items-center">
+            <span className="mr-3">🎨</span>
+            Gestión de Portafolio Público
+          </h3>
+          <p className="text-accent-700 mt-2">
+            Administra los diseños que se muestran en tu portafolio público (independiente de proyectos de clientes)
+          </p>
+        </div>
+        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-lg">
+          <div className="text-2xl font-bold">{disenosPortafolio.length}</div>
+          <div className="text-sm">Diseños Totales</div>
+        </div>
+      </div>
+      
+      {/* Stats rápidos */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <div className="text-blue-800 font-semibold">🏠 Arquitectura</div>
+          <div className="text-blue-600">{disenosPortafolio.filter(d => d.categoria === 'arquitectura').length} diseños</div>
+        </div>
+        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+          <div className="text-green-800 font-semibold">🪑 Interiores</div>
+          <div className="text-green-600">{disenosPortafolio.filter(d => d.categoria === 'interiores').length} diseños</div>
+        </div>
+        <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+          <div className="text-orange-800 font-semibold">🛋️ Muebles</div>
+          <div className="text-orange-600">{disenosPortafolio.filter(d => d.categoria === 'muebles').length} diseños</div>
+        </div>
+      </div>
+    </div>
+
+    {/* Mensaje si no hay diseños */}
+    {disenosPortafolio.length === 0 ? (
+      <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+        <div className="text-6xl mb-4">🎨</div>
+        <h3 className="text-2xl font-bold text-primary-900 mb-4">¡Comienza tu Portafolio!</h3>
+        <p className="text-accent-700 mb-6 max-w-md mx-auto">
+          Agrega tus primeros diseños arquitectónicos, de interiores o muebles para mostrar tu trabajo al mundo.
+        </p>
+        <button 
+          className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-6 py-3 rounded-lg hover:from-primary-600 hover:to-primary-700 transition-all"
+          onClick={() => setMostrarModalDiseno(true)}
+        >
+          ✨ Agregar Primer Diseño
+        </button>
+      </div>
+    ) : (
+      /* Lista de diseños existentes */
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h4 className="text-xl font-bold text-primary-900">Tus Diseños</h4>
+          <button 
+            className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-4 py-2 rounded-lg hover:from-primary-600 hover:to-primary-700 transition-all"
+            onClick={() => setMostrarModalDiseno(true)}
+          >
+            ➕ Agregar Diseño
+          </button>
+        </div>
+        
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {disenosPortafolio.map((diseno) => (
+            <div key={diseno.id} className="border border-accent-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+              {/* Imagen del diseño */}
+                <div className="h-48 bg-gradient-to-br from-primary-100 to-accent-200 flex items-center justify-center overflow-hidden">
+                  {diseno.imagen_principal ? (
+                    <img 
+                      src={diseno.imagen_principal}
+                      alt={diseno.titulo}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-center">
+                      <span className="text-4xl">
+                        {diseno.categoria === 'arquitectura' && '🏠'}
+                        {diseno.categoria === 'interiores' && '🪑'}
+                        {diseno.categoria === 'muebles' && '🛋️'}
+                      </span>
+                      <p className="text-accent-700 font-medium mt-2 capitalize">{diseno.categoria}</p>
+                      <p className="text-accent-500 text-xs mt-1">Sin imagen</p>
+                    </div>
+                  )}
+                </div>
+              
+              {/* Contenido */}
+              <div className="p-4">
+                <h5 className="font-semibold text-primary-900 mb-2">{diseno.titulo}</h5>
+                <p className="text-accent-600 text-sm mb-3 line-clamp-2">{diseno.descripcion}</p>
+                
+                <div className="flex justify-between items-center">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    diseno.mostrar_publico 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {diseno.mostrar_publico ? '👁️ Público' : '🔒 Oculto'}
+                  </span>
+                  
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => abrirEdicion(diseno)}
+                      className="text-blue-600 hover:text-blue-800 text-sm"
+                    >
+                      ✏️ Editar
+                    </button>
+                    <button 
+                      onClick={() => eliminarDiseno(diseno.id)}
+                      className="text-red-600 hover:text-red-800 text-sm"
+                    >
+                      🗑️ Eliminarx
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+)}
 
         {/* Configuración Tab */}
         {activeTab === 'configuracion' && (
@@ -652,7 +896,7 @@ function AdminPanel() {
                   ✖️
                 </button>
               </div>
-            </div>
+              </div>
             
             {/* Contenido del Modal */}
             <div className="p-6">
@@ -680,6 +924,171 @@ function AdminPanel() {
           </div>
         </div>
       )}
+      {/* Modal de Agregar Diseño */}
+{mostrarModalDiseno && (
+  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
+    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      {/* Header del Modal */}
+      <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 text-white rounded-t-2xl">
+        <div className="flex justify-between items-center">
+          <div>
+            <h3 className="text-2xl font-bold">🎨 {modoEdicion ? 'Editar' : 'Agregar'} Diseño</h3>
+            <p className="text-purple-100 mt-1">
+              {modoEdicion ? 'Actualizar diseño existente' : 'Nuevo diseño arquitectónico, interior o mueble'}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setMostrarModalDiseno(false)
+              setModoEdicion(false)
+              setDisenoEditando(null)
+              setNuevoDiseno({
+                titulo: '',
+                descripcion: '',
+                categoria: '',
+                año_diseno: new Date().getFullYear(),
+                cliente_tipo: '',
+                mostrar_publico: true,
+                orden_display: 0,
+                tags: []
+              })
+            }}
+            className="text-white hover:text-red-200 text-2xl transition-colors"
+          >
+            ✖️
+          </button>
+        </div>
+      </div>
+      
+      {/* Contenido del Modal */}
+      <div className="p-6">
+        {/* Formulario */}
+        <form onSubmit={modoEdicion ? editarDiseno : agregarDiseno} className="space-y-6">
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-primary-900 mb-2">
+                🏷️ Título del Diseño *
+              </label>
+              <input
+                type="text"
+                value={nuevoDiseno.titulo}
+                onChange={(e) => setNuevoDiseno({...nuevoDiseno, titulo: e.target.value})}
+                className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                placeholder="Ej: Casa Moderna Minimalista"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-primary-900 mb-2">
+                📂 Categoría *
+              </label>
+              <select
+                value={nuevoDiseno.categoria}
+                onChange={(e) => setNuevoDiseno({...nuevoDiseno, categoria: e.target.value})}
+                className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                required
+              >
+                <option value="">Seleccionar categoría</option>
+                <option value="arquitectura">🏠 Arquitectura</option>
+                <option value="interiores">🪑 Interiores</option>
+                <option value="muebles">🛋️ Muebles</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-primary-900 mb-2">
+              📝 Descripción
+            </label>
+            <textarea
+              value={nuevoDiseno.descripcion}
+              onChange={(e) => setNuevoDiseno({...nuevoDiseno, descripcion: e.target.value})}
+              rows="3"
+              className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+              placeholder="Describe las características principales del diseño..."
+            />
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-primary-900 mb-2">
+                📅 Año de Diseño
+              </label>
+              <input
+                type="number"
+                value={nuevoDiseno.año_diseno}
+                onChange={(e) => setNuevoDiseno({...nuevoDiseno, año_diseno: parseInt(e.target.value)})}
+                className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                min="2020"
+                max={new Date().getFullYear()}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-primary-900 mb-2">
+                🏢 Tipo de Cliente
+              </label>
+              <select
+                value={nuevoDiseno.cliente_tipo}
+                onChange={(e) => setNuevoDiseno({...nuevoDiseno, cliente_tipo: e.target.value})}
+                className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="">Seleccionar tipo</option>
+                <option value="residencial">🏠 Residencial</option>
+                <option value="comercial">🏢 Comercial</option>
+                <option value="conceptual">💡 Conceptual</option>
+              </select>
+            </div>
+          </div>
+
+          <label className="flex items-center p-3 border border-accent-300 rounded-lg hover:bg-accent-50 transition-all cursor-pointer">
+            <input
+              type="checkbox"
+              checked={nuevoDiseno.mostrar_publico}
+              onChange={(e) => setNuevoDiseno({...nuevoDiseno, mostrar_publico: e.target.checked})}
+              className="mr-3 h-4 w-4 text-purple-600 focus:ring-purple-500"
+            />
+            <span className="text-sm font-medium text-accent-700">👁️ Mostrar en portafolio público</span>
+          </label>
+
+          <div className="flex gap-4 pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setMostrarModalDiseno(false)
+                setModoEdicion(false)
+                setDisenoEditando(null)
+              }}
+              className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white py-3 rounded-lg transition-all"
+            >
+              {modoEdicion ? '💾 Actualizar Diseño' : '✨ Agregar Diseño'}
+            </button>
+          </div>
+        </form>
+
+        {/* Sección de imagen (solo en modo edición) */}
+        {modoEdicion && disenoEditando && (
+          <div className="border-t border-gray-200 pt-6 mt-6">
+            <h4 className="text-lg font-semibold text-primary-900 mb-4">🖼️ Imagen del Diseño</h4>
+            <SubidaImagenesDiseno 
+              disenoId={disenoEditando.id}
+              onImagenSubida={(url) => {
+                fetchDisenosPortafolio()
+              }}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   )
 }

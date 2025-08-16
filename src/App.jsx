@@ -6,6 +6,8 @@ import Login from './pages/Login'
 import AdminPanel from './pages/AdminPanel'
 import ProyectoPrivado from './pages/ProyectoPrivado'
 import PortafolioCompleto from './pages/PortafolioCompleto'
+import PortafolioDisenos from './pages/PortafolioDisenos'
+
 
 function App() {
   return (
@@ -22,6 +24,7 @@ function App() {
               </ProtectedRoute>
             } 
           />
+          <Route path="/portafolio-disenos" element={<PortafolioDisenos />} />
           <Route path="/cliente/:urlPrivada" element={<ProyectoPrivado />} />
           <Route path="/portafolio" element={<PortafolioCompleto />} />
         </Routes>

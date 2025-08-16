@@ -22,22 +22,20 @@ function LandingPage() {
   }, [])
 
   const fetchProyectosPortafolio = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('proyectos')
-        .select(`
-          *,
-          clientes (nombre, apellido, tipo_proyecto)
-        `)
-        .eq('mostrar_en_portafolio', true)
-        .order('created_at', { ascending: false })
+  try {
+    const { data, error } = await supabase
+      .from('portafolio_designs')
+      .select('*')
+      .eq('mostrar_publico', true)
+      .order('orden_display', { ascending: false })
+      .limit(6)
 
-      if (error) throw error
-      setProyectosPortafolio(data)
-    } catch (error) {
-      console.error('Error:', error)
-    }
+    if (error) throw error
+    setProyectosPortafolio(data || [])
+  } catch (error) {
+    console.error('Error:', error)
   }
+}
 
   const enviarEmail = async (e) => {
     e.preventDefault()
@@ -196,7 +194,7 @@ function LandingPage() {
               <div className="text-amber-100 uppercase tracking-widest text-sm">Proyectos Completados</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl font-bold text-amber-300 mb-2">8</div>
+              <div className="text-4xl font-bold text-amber-300 mb-2">5</div>
               <div className="text-amber-100 uppercase tracking-widest text-sm">Años de Experiencia</div>
             </div>
             <div className="text-center">
@@ -277,66 +275,77 @@ function LandingPage() {
       </section>
 
       {/* Portfolio Premium */}
-      <section id="portafolio" className="py-32 bg-gradient-to-b from-amber-900 to-orange-900">
-        <div className="container mx-auto px-6">
-          <div className="text-center mb-20">
-            <div className="inline-block px-4 py-2 bg-amber-400/20 backdrop-blur-sm rounded-full border border-amber-400/30 mb-6">
-              <span className="text-amber-200 text-sm tracking-widest font-medium">NUESTRO TRABAJO</span>
-            </div>
-            <h2 className="text-5xl font-bold text-white mb-6">PROYECTOS DESTACADOS</h2>
-            <p className="text-xl text-amber-200 max-w-3xl mx-auto">
-              Cada proyecto refleja nuestro compromiso con la excelencia, la innovación y la sustentabilidad
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {proyectosPortafolio.map((proyecto, index) => (
-              <div key={proyecto.id} className="group relative overflow-hidden bg-white/10 backdrop-blur-sm rounded-2xl border border-amber-400/20 hover:border-amber-400/40 transition-all duration-500 transform hover:-translate-y-2">
-                <div className="aspect-video bg-gradient-to-br from-amber-400/20 to-orange-500/20 flex items-center justify-center relative overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-amber-500/30 to-orange-600/30"></div>
-                  <div className="relative z-10 text-center">
-                    <div className="text-4xl text-white mb-2">🏗️</div>
-                    <span className="text-amber-200 text-sm tracking-widest">MODELO 3D INTERACTIVO</span>
-                  </div>
-                  <div className="absolute top-4 right-4 bg-amber-500/20 backdrop-blur-sm px-3 py-1 rounded-full">
-                    <span className="text-amber-200 text-xs tracking-widest">#{String(index + 1).padStart(2, '0')}</span>
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-white mb-3 group-hover:text-amber-300 transition-colors">
-                    {proyecto.titulo}
-                  </h3>
-                  <p className="text-amber-200 mb-4 leading-relaxed text-sm">
-                    {proyecto.descripcion}
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-400/20 text-amber-300 border border-amber-400/30">
-                      {proyecto.clientes?.tipo_proyecto}
-                    </span>
-                    <a 
-                      href={`/cliente/${proyecto.url_privada}`}
-                      className="text-amber-400 hover:text-white font-semibold text-sm tracking-wide group-hover:translate-x-1 transition-all inline-block"
-                    >
-                      VER PROYECTO →
-                    </a>
-                  </div>
-                </div>
+        <section id="portafolio" className="py-32 bg-gradient-to-b from-amber-900 to-orange-900">
+          <div className="container mx-auto px-6">
+            <div className="text-center mb-20">
+              <div className="inline-block px-4 py-2 bg-amber-400/20 backdrop-blur-sm rounded-full border border-amber-400/30 mb-6">
+                <span className="text-amber-200 text-sm tracking-widest font-medium">NUESTRO TRABAJO</span>
               </div>
-            ))}
-          </div>
+              <h2 className="text-5xl font-bold text-white mb-6">PORTAFOLIO DE DISEÑOS</h2>
+              <p className="text-xl text-amber-200 max-w-3xl mx-auto">
+                Cada diseño refleja nuestro compromiso con la excelencia, la innovación y la creatividad arquitectónica
+              </p>
+            </div>
 
-          <div className="text-center mt-16">
-            <a
-              href="/portafolio"
-              className="group relative overflow-hidden bg-gradient-to-r from-amber-500 to-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl inline-block"
-            >
-              <span className="relative z-10">VER PORTAFOLIO COMPLETO</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-amber-600 to-orange-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></div>
-            </a>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {proyectosPortafolio.map((diseno, index) => (
+                <div key={diseno.id} className="group relative overflow-hidden bg-white/10 backdrop-blur-sm rounded-2xl border border-amber-400/20 hover:border-amber-400/40 transition-all duration-500 transform hover:-translate-y-2">
+                  <div className="aspect-video bg-gradient-to-br from-amber-400/20 to-orange-500/20 flex items-center justify-center relative overflow-hidden">
+                    {diseno.imagen_principal ? (
+                      <img 
+                        src={diseno.imagen_principal}
+                        alt={diseno.titulo}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <>
+                        <div className="absolute inset-0 bg-gradient-to-br from-amber-500/30 to-orange-600/30"></div>
+                        <div className="relative z-10 text-center">
+                          <div className="text-4xl text-white mb-2">
+                            {diseno.categoria === 'arquitectura' && '🏠'}
+                            {diseno.categoria === 'interiores' && '🪑'}
+                            {diseno.categoria === 'muebles' && '🛋️'}
+                          </div>
+                          <span className="text-amber-200 text-sm tracking-widest">DISEÑO {diseno.categoria.toUpperCase()}</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="absolute top-4 right-4 bg-amber-500/20 backdrop-blur-sm px-3 py-1 rounded-full">
+                      <span className="text-amber-200 text-xs tracking-widest">#{String(index + 1).padStart(2, '0')}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold text-white mb-3 group-hover:text-amber-300 transition-colors">
+                      {diseno.titulo}
+                    </h3>
+                    <p className="text-amber-200 mb-4 leading-relaxed text-sm">
+                      {diseno.descripcion || 'Diseño arquitectónico personalizado que combina funcionalidad y estética moderna.'}
+                    </p>
+                    <div className="flex justify-between items-center">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-amber-400/20 text-amber-300 border border-amber-400/30 capitalize">
+                        {diseno.categoria}
+                      </span>
+                      <span className="text-amber-400 hover:text-white font-semibold text-sm tracking-wide group-hover:translate-x-1 transition-all inline-block">
+                        {diseno.año_diseno} →
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="text-center mt-16">
+              <a
+                href="/portafolio-disenos"
+                className="group relative overflow-hidden bg-gradient-to-r from-amber-500 to-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-2xl inline-block"
+              >
+                <span className="relative z-10">VER PORTAFOLIO COMPLETO</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-600 to-orange-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></div>
+              </a>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
       {/* Contact Premium - FORMULARIO CORREGIDO */}
       <section id="contacto" className="py-32 bg-gradient-to-b from-stone-50 to-amber-50">
@@ -384,7 +393,7 @@ function LandingPage() {
                   </div>
                   <div>
                     <div className="text-amber-900 font-semibold">Ubicación</div>
-                    <div className="text-amber-700">Asunción, Paraguay</div>
+                    <div className="text-amber-700">Hernandarias, Paraguay</div>
                   </div>
                 </div>
               </div>
@@ -518,7 +527,7 @@ function LandingPage() {
               <ul className="space-y-2 text-amber-200">
                 <li>info@arqzoy.com</li>
                 <li>+595 973 645 330</li>
-                <li>Asunción, Paraguay</li>
+                <li>Hernandarias, Paraguay</li>
               </ul>
             </div>
           </div>
