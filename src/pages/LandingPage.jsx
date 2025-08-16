@@ -9,10 +9,12 @@ function LandingPage() {
   const { user } = useAuth()
   const [enviando, setEnviando] = useState(false)
   const [mensajeEnviado, setMensajeEnviado] = useState(false)
+  const [perfilPersonal, setPerfilPersonal] = useState(null)
 
   useEffect(() => {
-    fetchProyectosPortafolio()
-  }, [])
+  fetchProyectosPortafolio()
+  fetchPerfilPersonal()
+}, [])
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -32,6 +34,19 @@ function LandingPage() {
 
     if (error) throw error
     setProyectosPortafolio(data || [])
+  } catch (error) {
+    console.error('Error:', error)
+  }
+}
+const fetchPerfilPersonal = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('perfil_personal')
+      .select('*')
+      .single()
+
+    if (error && error.code !== 'PGRST116') throw error
+    if (data) setPerfilPersonal(data)
   } catch (error) {
     console.error('Error:', error)
   }
@@ -208,6 +223,121 @@ function LandingPage() {
           </div>
         </div>
       </section>
+      {/* About Me Section */}
+        {perfilPersonal && (
+          <section className="py-32 bg-gradient-to-b from-stone-50 to-amber-50">
+            <div className="container mx-auto px-6">
+              <div className="grid lg:grid-cols-2 gap-16 items-center">
+                {/* Foto de Perfil */}
+                <div className="text-center lg:text-left">
+                  <div className="relative inline-block">
+                    <div className="w-80 h-80 mx-auto lg:mx-0 rounded-full overflow-hidden shadow-2xl bg-gradient-to-br from-amber-200 to-orange-300">
+                      {perfilPersonal.foto_perfil ? (
+                        <img 
+                          src={perfilPersonal.foto_perfil}
+                          alt="Zoy Schikmann"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <span className="text-8xl text-amber-700">👤</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Decoración */}
+                    <div className="absolute -top-4 -right-4 w-24 h-24 bg-amber-400 rounded-full opacity-20 animate-pulse"></div>
+                    <div className="absolute -bottom-6 -left-6 w-32 h-32 bg-orange-400 rounded-full opacity-15 animate-float"></div>
+                  </div>
+                </div>
+
+                {/* Contenido */}
+                <div>
+                  <div className="inline-block px-4 py-2 bg-amber-500/10 rounded-full border border-amber-400/20 mb-6">
+                    <span className="text-amber-800 text-sm tracking-widest font-medium">CONOCE A LA ARQUITECTA</span>
+                  </div>
+                  
+                  <h2 className="text-5xl font-bold text-amber-900 mb-6 leading-tight">
+                    Sobre
+                    <span className="block text-orange-600">Mí</span>
+                  </h2>
+                  
+                  <div className="mb-8">
+                    <h3 className="text-2xl font-semibold text-amber-800 mb-4">
+                      {perfilPersonal.titulo_profesional}
+                    </h3>
+                    <p className="text-xl text-amber-700 leading-relaxed">
+                      {perfilPersonal.descripcion_personal}
+                    </p>
+                  </div>
+
+                  {/* Estadísticas personales */}
+                  <div className="grid md:grid-cols-2 gap-6 mb-8">
+                    <div className="bg-white p-6 rounded-xl shadow-lg border border-amber-100">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+                          <span className="text-white text-xl">⏱️</span>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-amber-900">{perfilPersonal.años_experiencia}+</div>
+                          <div className="text-amber-700 text-sm">Años de Experiencia</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-xl shadow-lg border border-amber-100">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
+                          <span className="text-white text-xl">🏗️</span>
+                        </div>
+                        <div>
+                          <div className="text-2xl font-bold text-amber-900">{perfilPersonal.proyectos_completados}+</div>
+                          <div className="text-amber-700 text-sm">Proyectos Completados</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Especialidades */}
+                  <div className="mb-8">
+                    <h4 className="text-lg font-semibold text-amber-900 mb-4">🎯 Especialidades</h4>
+                    <div className="flex flex-wrap gap-3">
+                      <span className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
+                        🏠 Arquitectura Residencial
+                      </span>
+                      <span className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
+                        🪑 Diseño de Interiores
+                      </span>
+                      <span className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
+                        🛋️ Diseño de Muebles
+                      </span>
+                      <span className="px-4 py-2 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
+                        🌱 Proyectos Sustentables
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Call to Action */}
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <a
+                      href="#portafolio"
+                      className="group relative overflow-hidden bg-gradient-to-r from-amber-500 to-orange-600 text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-xl text-center"
+                    >
+                      <span className="relative z-10">Ver Mi Trabajo</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-amber-600 to-orange-700 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></div>
+                    </a>
+                    <a
+                      href="#contacto"
+                      className="group border-2 border-amber-400 text-amber-700 hover:text-white px-8 py-4 rounded-lg text-lg font-semibold transition-all duration-300 relative overflow-hidden text-center"
+                    >
+                      <span className="relative z-10">Trabajemos Juntos</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-600 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></div>
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
       {/* Services Premium */}
       <section id="servicios" className="py-32 bg-gradient-to-b from-stone-50 to-amber-50">
@@ -222,54 +352,70 @@ function LandingPage() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-12">
-            <div className="group relative overflow-hidden bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative p-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <span className="text-2xl text-white">🏠</span>
-                </div>
-                <h3 className="text-2xl font-bold text-amber-900 mb-4">Viviendas Modulares</h3>
-                <p className="text-amber-700 mb-6 leading-relaxed">
-                  Casas prefabricadas con diseño personalizado, construcción rápida y tecnología sustentable para el hogar del futuro.
-                </p>
-                <div className="border-t border-amber-200 pt-4">
-                  <span className="text-amber-600 font-semibold text-sm tracking-wide">CONSTRUCCIÓN EFICIENTE</span>
-                </div>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="group relative overflow-hidden bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative p-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <span className="text-2xl text-white">🏠</span>
+              </div>
+              <h3 className="text-xl font-bold text-amber-900 mb-4">Arquitectura</h3>
+              <p className="text-amber-700 mb-6 leading-relaxed">
+                Diseños arquitectónicos residenciales y comerciales con enfoque en funcionalidad y estética moderna.
+              </p>
+              <div className="border-t border-amber-200 pt-4">
+                <span className="text-amber-600 font-semibold text-sm tracking-wide">DISEÑO ESTRUCTURAL</span>
               </div>
             </div>
+          </div>
 
-            <div className="group relative overflow-hidden bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative p-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <span className="text-2xl text-white">🏢</span>
-                </div>
-                <h3 className="text-2xl font-bold text-amber-900 mb-4">Espacios Comerciales</h3>
-                <p className="text-amber-700 mb-6 leading-relaxed">
-                  Oficinas, locales y espacios comerciales que combinan funcionalidad, estética y tecnología de última generación.
-                </p>
-                <div className="border-t border-amber-200 pt-4">
-                  <span className="text-amber-600 font-semibold text-sm tracking-wide">DISEÑO CORPORATIVO</span>
-                </div>
+          <div className="group relative overflow-hidden bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative p-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <span className="text-2xl text-white">🪑</span>
+              </div>
+              <h3 className="text-xl font-bold text-amber-900 mb-4">Diseño de Interiores</h3>
+              <p className="text-amber-700 mb-6 leading-relaxed">
+                Espacios interiores que reflejan personalidad y optimizan la funcionalidad de cada ambiente.
+              </p>
+              <div className="border-t border-amber-200 pt-4">
+                <span className="text-amber-600 font-semibold text-sm tracking-wide">AMBIENTACIÓN</span>
               </div>
             </div>
+          </div>
 
-            <div className="group relative overflow-hidden bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <div className="relative p-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <span className="text-2xl text-white">🏘️</span>
-                </div>
-                <h3 className="text-2xl font-bold text-amber-900 mb-4">Desarrollos Urbanos</h3>
-                <p className="text-amber-700 mb-6 leading-relaxed">
-                  Complejos habitacionales y desarrollos urbanos integrales con elementos prefabricados y planificación sustentable.
-                </p>
-                <div className="border-t border-amber-200 pt-4">
-                  <span className="text-amber-600 font-semibold text-sm tracking-wide">PLANIFICACIÓN URBANA</span>
-                </div>
+          <div className="group relative overflow-hidden bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative p-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <span className="text-2xl text-white">🛋️</span>
+              </div>
+              <h3 className="text-xl font-bold text-amber-900 mb-4">Diseño de Muebles</h3>
+              <p className="text-amber-700 mb-6 leading-relaxed">
+                Muebles personalizados que combinan diseño exclusivo con funcionalidad y calidad artesanal.
+              </p>
+              <div className="border-t border-amber-200 pt-4">
+                <span className="text-amber-600 font-semibold text-sm tracking-wide">MOBILIARIO CUSTOM</span>
               </div>
             </div>
+          </div>
+
+          <div className="group relative overflow-hidden bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 to-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="relative p-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                <span className="text-2xl text-white">💡</span>
+              </div>
+              <h3 className="text-xl font-bold text-amber-900 mb-4">Consultoría</h3>
+              <p className="text-amber-700 mb-6 leading-relaxed">
+                Asesoramiento profesional para optimizar espacios existentes y planificar nuevos proyectos.
+              </p>
+              <div className="border-t border-amber-200 pt-4">
+                <span className="text-amber-600 font-semibold text-sm tracking-wide">ASESORAMIENTO</span>
+              </div>
+            </div>
+          </div>
           </div>
         </div>
       </section>

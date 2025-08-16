@@ -44,6 +44,7 @@ const [modoEdicion, setModoEdicion] = useState(false)
   useEffect(() => {
   fetchData()
   fetchDisenosPortafolio()
+  fetchPerfilPersonal()
 }, [])
 
   const fetchData = async () => {
@@ -78,6 +79,66 @@ const [modoEdicion, setModoEdicion] = useState(false)
     setDisenosPortafolio(data || [])
   } catch (error) {
     console.error('Error:', error)
+  }
+}
+const fetchPerfilPersonal = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('perfil_personal')
+      .select('*')
+      .single()
+
+    if (error && error.code !== 'PGRST116') throw error
+    
+    if (data) {
+      setPerfilPersonal(data)
+    }
+  } catch (error) {
+    console.error('Error:', error)
+  }
+}
+const subirFotoPerfil = async (e) => {
+  const archivo = e.target.files[0]
+  if (!archivo) return
+
+  try {
+    const timestamp = Date.now()
+    const extension = archivo.name.split('.').pop()
+    const nombreArchivo = `perfil/foto-perfil-${timestamp}.${extension}`
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('arqzoy-archivos')
+      .upload(nombreArchivo, archivo)
+
+    if (uploadError) throw uploadError
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('arqzoy-archivos')
+      .getPublicUrl(nombreArchivo)
+
+    setPerfilPersonal({...perfilPersonal, foto_perfil: publicUrl})
+    alert('✅ Foto subida exitosamente!')
+  } catch (error) {
+    console.error('Error:', error)
+    alert('❌ Error al subir foto: ' + error.message)
+  }
+}
+
+const guardarPerfil = async (e) => {
+  e.preventDefault()
+  try {
+    const { error } = await supabase
+      .from('perfil_personal')
+      .upsert([perfilPersonal])
+
+    if (error) throw error
+
+    fetchPerfilPersonal()
+    setEditandoPerfil(false)
+    alert('✅ Perfil actualizado exitosamente')
+  } catch (error) {
+    console.error('Error:', error)
+    alert('❌ Error al actualizar perfil: ' + error.message)
   }
 }
 const agregarDiseno = async (e) => {
@@ -245,6 +306,16 @@ const abrirEdicion = (diseno) => {
     alert('❌ Error al cambiar estado: ' + error.message)
   }
 }
+// Estado para perfil personal
+const [perfilPersonal, setPerfilPersonal] = useState({
+  foto_perfil: '',
+  titulo_profesional: 'Arquitecta & Diseñadora',
+  descripcion_personal: '',
+  años_experiencia: 5,
+  proyectos_completados: 25,
+  especializaciones: []
+})
+const [editandoPerfil, setEditandoPerfil] = useState(false)
 
   const totalIngresos = clientes.reduce((sum, c) => sum + (c.monto_abonado || 0), 0)
   const proyectosPublicos = proyectos.filter(p => p.mostrar_en_portafolio).length
@@ -298,6 +369,7 @@ const abrirEdicion = (diseno) => {
           <div className="bg-white rounded-xl shadow-md p-2">
             <nav className="flex space-x-2">
               {[
+                { id: 'perfil', label: '👤 Mi Perfil', icon: '👤' },
                 { id: 'dashboard', label: '📊 Dashboard', icon: '📊' },
                 { id: 'clientes', label: `👥 Clientes (${clientes.length})`, icon: '👥' },
                 { id: 'proyectos', label: `📐 Proyectos (${proyectos.length})`, icon: '📐' },
@@ -545,282 +617,457 @@ const abrirEdicion = (diseno) => {
           </div>
         )}
 
-        {/* Proyectos Tab */}
-        {activeTab === 'proyectos' && (
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Formulario Agregar Proyecto Mejorado */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-lg p-6 sticky top-8">
-                <h3 className="text-2xl font-bold text-primary-900 mb-6 flex items-center">
-                  <span className="mr-3">📐</span>
-                  Nuevo Proyecto
-                </h3>
-                <form onSubmit={agregarProyecto} className="space-y-4">
-                  <select
-                    value={nuevoProyecto.cliente_id}
-                    onChange={(e) => setNuevoProyecto({...nuevoProyecto, cliente_id: e.target.value})}
-                    className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                    required
-                  >
-                    <option value="">👤 Seleccionar Cliente</option>
-                    {clientes.map((cliente) => (
-                      <option key={cliente.id} value={cliente.id}>
-                        {cliente.nombre} {cliente.apellido}
-                      </option>
-                    ))}
-                  </select>
-                  
-                  <input
-                    type="text"
-                    placeholder="🏗️ Título del proyecto"
-                    value={nuevoProyecto.titulo}
-                    onChange={(e) => setNuevoProyecto({...nuevoProyecto, titulo: e.target.value})}
-                    className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                    required
-                  />
-                  
-                  <textarea
-                    placeholder="📝 Descripción del proyecto"
-                    value={nuevoProyecto.descripcion}
-                    onChange={(e) => setNuevoProyecto({...nuevoProyecto, descripcion: e.target.value})}
-                    rows="4"
-                    className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                  />
-                  
-                  <label className="flex items-center p-3 border border-accent-300 rounded-lg hover:bg-accent-50 transition-all cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={nuevoProyecto.mostrar_en_portafolio}
-                      onChange={(e) => setNuevoProyecto({...nuevoProyecto, mostrar_en_portafolio: e.target.checked})}
-                      className="mr-3 h-4 w-4 text-primary-600 focus:ring-primary-500 border-accent-300 rounded"
-                    />
-                    <span className="text-sm font-medium text-accent-700">👁️ Mostrar en portafolio público</span>
-                  </label>
-                  
-                  <button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
-                  >
-                    ✨ Crear Proyecto
-                  </button>
-                </form>
-              </div>
-              </div>
-              {/* Lista de Proyectos Mejorada */}
-              <div className="lg:col-span-2">
-                <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-                  <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-6 text-white">
-                    <h3 className="text-2xl font-bold flex items-center">
-                      <span className="mr-3">📐</span>
-                      Lista de Proyectos
-                    </h3>
-                  </div>
-                  <div className="p-6">
-                    <div className="space-y-4">
-                      {proyectos.map((proyecto) => (
-                        <div key={proyecto.id} className="border border-accent-200 rounded-lg p-4 hover:shadow-md transition-all duration-300">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <h4 className="text-lg font-semibold text-primary-900 mb-2">{proyecto.titulo}</h4>
-                              <p className="text-accent-700 mb-3">{proyecto.descripcion}</p>
-                              <div className="space-y-2 mb-3">
-                                <div className="text-sm text-accent-600">
-                                  👤 <strong>Cliente:</strong> {proyecto.clientes?.nombre} {proyecto.clientes?.apellido}
-                                </div>
-                                <div className="text-sm text-accent-600 mb-2">
-                                  🔗 <strong>URL privada:</strong> 
-                                  <code className="ml-2 bg-accent-100 px-2 py-1 rounded text-primary-600">
-                                    /cliente/{proyecto.url_privada}
-                                  </code>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  <button
-                                    onClick={() => {
-                                      const url = `${window.location.origin}/cliente/${proyecto.url_privada}`
-                                      navigator.clipboard.writeText(url)
-                                      alert('✅ Link copiado al portapapeles!')
-                                    }}
-                                    className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full hover:bg-blue-200 transition-colors"
-                                  >
-                                    📋 Copiar Link
-                                  </button>
-                                  <a
-                                    href={`/cliente/${proyecto.url_privada}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full hover:bg-green-200 transition-colors"
-                                  >
-                                    👁️ Vista Previa
-                                  </a>
-                                  <button
-                                    onClick={() => {
-                                      setProyectoSeleccionado(proyecto)
-                                      setMostrarSubidaArchivos(true)
-                                    }}
-                                    className="text-xs bg-purple-100 text-purple-800 px-3 py-1 rounded-full hover:bg-purple-200 transition-colors"
-                                  >
-                                    📁 Gestionar Archivos
-                                  </button>
+                      {/* Proyectos Tab */}
+                      {activeTab === 'proyectos' && (
+                      <div className="grid lg:grid-cols-3 gap-8">
+                        {/* Formulario Agregar Proyecto Mejorado */}
+                        <div className="lg:col-span-1">
+                          <div className="bg-white rounded-xl shadow-lg p-6 sticky top-8">
+                            <h3 className="text-2xl font-bold text-primary-900 mb-6 flex items-center">
+                              <span className="mr-3">📐</span>
+                              Nuevo Proyecto
+                            </h3>
+                            <form onSubmit={agregarProyecto} className="space-y-4">
+                              <select
+                                value={nuevoProyecto.cliente_id}
+                                onChange={(e) => setNuevoProyecto({...nuevoProyecto, cliente_id: e.target.value})}
+                                className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                                required
+                              >
+                                <option value="">👤 Seleccionar Cliente</option>
+                                {clientes.map((cliente) => (
+                                  <option key={cliente.id} value={cliente.id}>
+                                    {cliente.nombre} {cliente.apellido}
+                                  </option>
+                                ))}
+                              </select>
+                              
+                              <input
+                                type="text"
+                                placeholder="🏗️ Título del proyecto"
+                                value={nuevoProyecto.titulo}
+                                onChange={(e) => setNuevoProyecto({...nuevoProyecto, titulo: e.target.value})}
+                                className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                                required
+                              />
+                              
+                              <textarea
+                                placeholder="📝 Descripción del proyecto"
+                                value={nuevoProyecto.descripcion}
+                                onChange={(e) => setNuevoProyecto({...nuevoProyecto, descripcion: e.target.value})}
+                                rows="4"
+                                className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                              />
+                              
+                              <label className="flex items-center p-3 border border-accent-300 rounded-lg hover:bg-accent-50 transition-all cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={nuevoProyecto.mostrar_en_portafolio}
+                                  onChange={(e) => setNuevoProyecto({...nuevoProyecto, mostrar_en_portafolio: e.target.checked})}
+                                  className="mr-3 h-4 w-4 text-primary-600 focus:ring-primary-500 border-accent-300 rounded"
+                                />
+                                <span className="text-sm font-medium text-accent-700">👁️ Mostrar en portafolio público</span>
+                              </label>
+                              
+                              <button
+                                type="submit"
+                                className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white py-3 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                              >
+                                ✨ Crear Proyecto
+                              </button>
+                            </form>
+                          </div>
+                          </div>
+                          {/* Lista de Proyectos Mejorada */}
+                          <div className="lg:col-span-2">
+                            <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+                              <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-6 text-white">
+                                <h3 className="text-2xl font-bold flex items-center">
+                                  <span className="mr-3">📐</span>
+                                  Lista de Proyectos
+                                </h3>
+                              </div>
+                              <div className="p-6">
+                                <div className="space-y-4">
+                                  {proyectos.map((proyecto) => (
+                                    <div key={proyecto.id} className="border border-accent-200 rounded-lg p-4 hover:shadow-md transition-all duration-300">
+                                      <div className="flex justify-between items-start">
+                                        <div className="flex-1">
+                                          <h4 className="text-lg font-semibold text-primary-900 mb-2">{proyecto.titulo}</h4>
+                                          <p className="text-accent-700 mb-3">{proyecto.descripcion}</p>
+                                          <div className="space-y-2 mb-3">
+                                            <div className="text-sm text-accent-600">
+                                              👤 <strong>Cliente:</strong> {proyecto.clientes?.nombre} {proyecto.clientes?.apellido}
+                                            </div>
+                                            <div className="text-sm text-accent-600 mb-2">
+                                              🔗 <strong>URL privada:</strong> 
+                                              <code className="ml-2 bg-accent-100 px-2 py-1 rounded text-primary-600">
+                                                /cliente/{proyecto.url_privada}
+                                              </code>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                              <button
+                                                onClick={() => {
+                                                  const url = `${window.location.origin}/cliente/${proyecto.url_privada}`
+                                                  navigator.clipboard.writeText(url)
+                                                  alert('✅ Link copiado al portapapeles!')
+                                                }}
+                                                className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full hover:bg-blue-200 transition-colors"
+                                              >
+                                                📋 Copiar Link
+                                              </button>
+                                              <a
+                                                href={`/cliente/${proyecto.url_privada}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full hover:bg-green-200 transition-colors"
+                                              >
+                                                👁️ Vista Previa
+                                              </a>
+                                              <button
+                                                onClick={() => {
+                                                  setProyectoSeleccionado(proyecto)
+                                                  setMostrarSubidaArchivos(true)
+                                                }}
+                                                className="text-xs bg-purple-100 text-purple-800 px-3 py-1 rounded-full hover:bg-purple-200 transition-colors"
+                                              >
+                                                📁 Gestionar Archivos
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <div className="ml-4">
+                                          <button
+                                            onClick={() => togglePortafolio(proyecto.id, proyecto.mostrar_en_portafolio)}
+                                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                                              proyecto.mostrar_en_portafolio
+                                                ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                                : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                                            }`}
+                                          >
+                                            {proyecto.mostrar_en_portafolio ? '👁️ Público' : '🔒 Privado'}
+                                          </button>
+                                          
+                                            <select
+                                              value={proyecto.estado || 'en_progreso'}
+                                              onChange={(e) => cambiarEstadoProyecto(proyecto.id, e.target.value)}
+                                              className="w-full px-3 py-1 text-xs border border-accent-300 rounded-full focus:ring-2 focus:ring-primary-500"
+                                            >
+                                              <option value="en_progreso">🚧 En Progreso</option>
+                                              <option value="revision">👀 En Revisión</option>
+                                              <option value="completo">✅ Completo</option>
+                                              <option value="pausado">⏸️ Pausado</option>
+                                            </select>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
                               </div>
                             </div>
-                            <div className="ml-4">
-                              <button
-                                onClick={() => togglePortafolio(proyecto.id, proyecto.mostrar_en_portafolio)}
-                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                                  proyecto.mostrar_en_portafolio
-                                    ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                                }`}
-                              >
-                                {proyecto.mostrar_en_portafolio ? '👁️ Público' : '🔒 Privado'}
-                              </button>
-                               
-                                <select
-                                  value={proyecto.estado || 'en_progreso'}
-                                  onChange={(e) => cambiarEstadoProyecto(proyecto.id, e.target.value)}
-                                  className="w-full px-3 py-1 text-xs border border-accent-300 rounded-full focus:ring-2 focus:ring-primary-500"
-                                >
-                                  <option value="en_progreso">🚧 En Progreso</option>
-                                  <option value="revision">👀 En Revisión</option>
-                                  <option value="completo">✅ Completo</option>
-                                  <option value="pausado">⏸️ Pausado</option>
-                                </select>
-                            </div>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
                         </div>
                       )}
                       {/* Portafolio Tab */}
-{activeTab === 'portafolio' && (
+                        {activeTab === 'portafolio' && (
+                          <div className="space-y-8">
+                            {/* Header del Portafolio */}
+                            <div className="bg-white rounded-xl shadow-lg p-6">
+                              <div className="flex justify-between items-center mb-6">
+                                <div>
+                                  <h3 className="text-2xl font-bold text-primary-900 flex items-center">
+                                    <span className="mr-3">🎨</span>
+                                    Gestión de Portafolio Público
+                                  </h3>
+                                  <p className="text-accent-700 mt-2">
+                                    Administra los diseños que se muestran en tu portafolio público (independiente de proyectos de clientes)
+                                  </p>
+                                </div>
+                                <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-lg">
+                                  <div className="text-2xl font-bold">{disenosPortafolio.length}</div>
+                                  <div className="text-sm">Diseños Totales</div>
+                                </div>
+                              </div>
+                              
+                              {/* Stats rápidos */}
+                              <div className="grid md:grid-cols-3 gap-4">
+                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                                  <div className="text-blue-800 font-semibold">🏠 Arquitectura</div>
+                                  <div className="text-blue-600">{disenosPortafolio.filter(d => d.categoria === 'arquitectura').length} diseños</div>
+                                </div>
+                                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                                  <div className="text-green-800 font-semibold">🪑 Interiores</div>
+                                  <div className="text-green-600">{disenosPortafolio.filter(d => d.categoria === 'interiores').length} diseños</div>
+                                </div>
+                                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                                  <div className="text-orange-800 font-semibold">🛋️ Muebles</div>
+                                  <div className="text-orange-600">{disenosPortafolio.filter(d => d.categoria === 'muebles').length} diseños</div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Mensaje si no hay diseños */}
+                            {disenosPortafolio.length === 0 ? (
+                              <div className="bg-white rounded-xl shadow-lg p-12 text-center">
+                                <div className="text-6xl mb-4">🎨</div>
+                                <h3 className="text-2xl font-bold text-primary-900 mb-4">¡Comienza tu Portafolio!</h3>
+                                <p className="text-accent-700 mb-6 max-w-md mx-auto">
+                                  Agrega tus primeros diseños arquitectónicos, de interiores o muebles para mostrar tu trabajo al mundo.
+                                </p>
+                                <button 
+                                  className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-6 py-3 rounded-lg hover:from-primary-600 hover:to-primary-700 transition-all"
+                                  onClick={() => setMostrarModalDiseno(true)}
+                                >
+                                  ✨ Agregar Primer Diseño
+                                </button>
+                              </div>
+                            ) : (
+                              /* Lista de diseños existentes */
+                              <div className="bg-white rounded-xl shadow-lg p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                  <h4 className="text-xl font-bold text-primary-900">Tus Diseños</h4>
+                                  <button 
+                                    className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-4 py-2 rounded-lg hover:from-primary-600 hover:to-primary-700 transition-all"
+                                    onClick={() => setMostrarModalDiseno(true)}
+                                  >
+                                    ➕ Agregar Diseño
+                                  </button>
+                                </div>
+                                
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                  {disenosPortafolio.map((diseno) => (
+                                    <div key={diseno.id} className="border border-accent-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                                      {/* Imagen del diseño */}
+                                        <div className="h-48 bg-gradient-to-br from-primary-100 to-accent-200 flex items-center justify-center overflow-hidden">
+                                          {diseno.imagen_principal ? (
+                                            <img 
+                                              src={diseno.imagen_principal}
+                                              alt={diseno.titulo}
+                                              className="w-full h-full object-cover"
+                                            />
+                                          ) : (
+                                            <div className="text-center">
+                                              <span className="text-4xl">
+                                                {diseno.categoria === 'arquitectura' && '🏠'}
+                                                {diseno.categoria === 'interiores' && '🪑'}
+                                                {diseno.categoria === 'muebles' && '🛋️'}
+                                              </span>
+                                              <p className="text-accent-700 font-medium mt-2 capitalize">{diseno.categoria}</p>
+                                              <p className="text-accent-500 text-xs mt-1">Sin imagen</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      
+                                      {/* Contenido */}
+                                      <div className="p-4">
+                                        <h5 className="font-semibold text-primary-900 mb-2">{diseno.titulo}</h5>
+                                        <p className="text-accent-600 text-sm mb-3 line-clamp-2">{diseno.descripcion}</p>
+                                        
+                                        <div className="flex justify-between items-center">
+                                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                            diseno.mostrar_publico 
+                                              ? 'bg-green-100 text-green-800' 
+                                              : 'bg-gray-100 text-gray-800'
+                                          }`}>
+                                            {diseno.mostrar_publico ? '👁️ Público' : '🔒 Oculto'}
+                                          </span>
+                                          
+                                          <div className="flex gap-2">
+                                            <button 
+                                              onClick={() => abrirEdicion(diseno)}
+                                              className="text-blue-600 hover:text-blue-800 text-sm"
+                                            >
+                                              ✏️ Editar
+                                            </button>
+                                            <button 
+                                              onClick={() => eliminarDiseno(diseno.id)}
+                                              className="text-red-600 hover:text-red-800 text-sm"
+                                            >
+                                              🗑️ Eliminarx
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+        {/* Perfil Tab */}
+{activeTab === 'perfil' && (
   <div className="space-y-8">
-    {/* Header del Portafolio */}
+    {/* Header del Perfil */}
     <div className="bg-white rounded-xl shadow-lg p-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center">
         <div>
           <h3 className="text-2xl font-bold text-primary-900 flex items-center">
-            <span className="mr-3">🎨</span>
-            Gestión de Portafolio Público
+            <span className="mr-3">👤</span>
+            Mi Perfil Profesional
           </h3>
           <p className="text-accent-700 mt-2">
-            Administra los diseños que se muestran en tu portafolio público (independiente de proyectos de clientes)
+            Administra tu información personal que aparece en el sitio web
           </p>
         </div>
-        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 rounded-lg">
-          <div className="text-2xl font-bold">{disenosPortafolio.length}</div>
-          <div className="text-sm">Diseños Totales</div>
-        </div>
-      </div>
-      
-      {/* Stats rápidos */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="text-blue-800 font-semibold">🏠 Arquitectura</div>
-          <div className="text-blue-600">{disenosPortafolio.filter(d => d.categoria === 'arquitectura').length} diseños</div>
-        </div>
-        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-          <div className="text-green-800 font-semibold">🪑 Interiores</div>
-          <div className="text-green-600">{disenosPortafolio.filter(d => d.categoria === 'interiores').length} diseños</div>
-        </div>
-        <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-          <div className="text-orange-800 font-semibold">🛋️ Muebles</div>
-          <div className="text-orange-600">{disenosPortafolio.filter(d => d.categoria === 'muebles').length} diseños</div>
-        </div>
+        <button
+          onClick={() => setEditandoPerfil(!editandoPerfil)}
+          className={`px-4 py-2 rounded-lg transition-all ${
+            editandoPerfil 
+              ? 'bg-gray-500 hover:bg-gray-600 text-white' 
+              : 'bg-primary-500 hover:bg-primary-600 text-white'
+          }`}
+        >
+          {editandoPerfil ? '❌ Cancelar' : '✏️ Editar Perfil'}
+        </button>
       </div>
     </div>
 
-    {/* Mensaje si no hay diseños */}
-    {disenosPortafolio.length === 0 ? (
-      <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-        <div className="text-6xl mb-4">🎨</div>
-        <h3 className="text-2xl font-bold text-primary-900 mb-4">¡Comienza tu Portafolio!</h3>
-        <p className="text-accent-700 mb-6 max-w-md mx-auto">
-          Agrega tus primeros diseños arquitectónicos, de interiores o muebles para mostrar tu trabajo al mundo.
-        </p>
-        <button 
-          className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-6 py-3 rounded-lg hover:from-primary-600 hover:to-primary-700 transition-all"
-          onClick={() => setMostrarModalDiseno(true)}
-        >
-          ✨ Agregar Primer Diseño
-        </button>
-      </div>
-    ) : (
-      /* Lista de diseños existentes */
+    {/* Vista/Edición del Perfil */}
+    <div className="grid lg:grid-cols-2 gap-8">
+      {/* Foto de Perfil */}
       <div className="bg-white rounded-xl shadow-lg p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h4 className="text-xl font-bold text-primary-900">Tus Diseños</h4>
-          <button 
-            className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-4 py-2 rounded-lg hover:from-primary-600 hover:to-primary-700 transition-all"
-            onClick={() => setMostrarModalDiseno(true)}
-          >
-            ➕ Agregar Diseño
-          </button>
-        </div>
+        <h4 className="text-xl font-bold text-primary-900 mb-6">📸 Foto de Perfil</h4>
         
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {disenosPortafolio.map((diseno) => (
-            <div key={diseno.id} className="border border-accent-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-              {/* Imagen del diseño */}
-                <div className="h-48 bg-gradient-to-br from-primary-100 to-accent-200 flex items-center justify-center overflow-hidden">
-                  {diseno.imagen_principal ? (
-                    <img 
-                      src={diseno.imagen_principal}
-                      alt={diseno.titulo}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="text-center">
-                      <span className="text-4xl">
-                        {diseno.categoria === 'arquitectura' && '🏠'}
-                        {diseno.categoria === 'interiores' && '🪑'}
-                        {diseno.categoria === 'muebles' && '🛋️'}
-                      </span>
-                      <p className="text-accent-700 font-medium mt-2 capitalize">{diseno.categoria}</p>
-                      <p className="text-accent-500 text-xs mt-1">Sin imagen</p>
-                    </div>
-                  )}
-                </div>
+        <div className="text-center">
+          <div className="w-48 h-48 mx-auto mb-6 rounded-full overflow-hidden bg-gradient-to-br from-primary-100 to-accent-200 flex items-center justify-center">
+            {perfilPersonal.foto_perfil ? (
+              <img 
+                src={perfilPersonal.foto_perfil}
+                alt="Foto de perfil"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="text-center">
+                <span className="text-6xl">👤</span>
+                <p className="text-accent-700 font-medium mt-2">Sin foto</p>
+              </div>
+            )}
+          </div>
+          
+          {editandoPerfil && (
+            <div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={subirFotoPerfil}
+                className="hidden"
+                id="foto-perfil-upload"
+              />
+              <label
+                htmlFor="foto-perfil-upload"
+                className="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg cursor-pointer transition-all inline-block"
+              >
+                📁 Cambiar Foto
+              </label>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Información del Perfil */}
+      <div className="bg-white rounded-xl shadow-lg p-6">
+        <h4 className="text-xl font-bold text-primary-900 mb-6">📝 Información Personal</h4>
+        
+        {editandoPerfil ? (
+          <form onSubmit={guardarPerfil} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-primary-900 mb-2">
+                Título Profesional
+              </label>
+              <input
+                type="text"
+                value={perfilPersonal.titulo_profesional}
+                onChange={(e) => setPerfilPersonal({...perfilPersonal, titulo_profesional: e.target.value})}
+                className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-primary-900 mb-2">
+                Descripción Personal
+              </label>
+              <textarea
+                value={perfilPersonal.descripcion_personal}
+                onChange={(e) => setPerfilPersonal({...perfilPersonal, descripcion_personal: e.target.value})}
+                rows="6"
+                className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                placeholder="Cuéntanos sobre ti, tu experiencia y especialidades..."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-primary-900 mb-2">
+                  Años de Experiencia
+                </label>
+                <input
+                  type="number"
+                  value={perfilPersonal.años_experiencia}
+                  onChange={(e) => setPerfilPersonal({...perfilPersonal, años_experiencia: parseInt(e.target.value)})}
+                  className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  min="1"
+                />
+              </div>
               
-              {/* Contenido */}
-              <div className="p-4">
-                <h5 className="font-semibold text-primary-900 mb-2">{diseno.titulo}</h5>
-                <p className="text-accent-600 text-sm mb-3 line-clamp-2">{diseno.descripcion}</p>
-                
-                <div className="flex justify-between items-center">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    diseno.mostrar_publico 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {diseno.mostrar_publico ? '👁️ Público' : '🔒 Oculto'}
-                  </span>
-                  
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => abrirEdicion(diseno)}
-                      className="text-blue-600 hover:text-blue-800 text-sm"
-                    >
-                      ✏️ Editar
-                    </button>
-                    <button 
-                      onClick={() => eliminarDiseno(diseno.id)}
-                      className="text-red-600 hover:text-red-800 text-sm"
-                    >
-                      🗑️ Eliminarx
-                    </button>
-                  </div>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-900 mb-2">
+                  Proyectos Completados
+                </label>
+                <input
+                  type="number"
+                  value={perfilPersonal.proyectos_completados}
+                  onChange={(e) => setPerfilPersonal({...perfilPersonal, proyectos_completados: parseInt(e.target.value)})}
+                  className="w-full p-3 border border-accent-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                  min="0"
+                />
               </div>
             </div>
-          ))}
-        </div>
+
+            <div className="flex gap-4 pt-4">
+              <button
+                type="button"
+                onClick={() => setEditandoPerfil(false)}
+                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="flex-1 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white py-3 rounded-lg transition-all"
+              >
+                💾 Guardar Cambios
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <h5 className="text-sm font-medium text-accent-600">Título</h5>
+              <p className="text-lg text-primary-900">{perfilPersonal.titulo_profesional}</p>
+            </div>
+            
+            <div>
+              <h5 className="text-sm font-medium text-accent-600">Descripción</h5>
+              <p className="text-primary-700 leading-relaxed">
+                {perfilPersonal.descripcion_personal || 'Sin descripción'}
+              </p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 pt-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="text-blue-800 font-semibold text-lg">{perfilPersonal.años_experiencia}</div>
+                <div className="text-blue-600 text-sm">Años Experiencia</div>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="text-green-800 font-semibold text-lg">{perfilPersonal.proyectos_completados}</div>
+                <div className="text-green-600 text-sm">Proyectos</div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-    )}
+    </div>
   </div>
 )}
 
@@ -925,40 +1172,40 @@ const abrirEdicion = (diseno) => {
         </div>
       )}
       {/* Modal de Agregar Diseño */}
-{mostrarModalDiseno && (
-  <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-    <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-      {/* Header del Modal */}
-      <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 text-white rounded-t-2xl">
-        <div className="flex justify-between items-center">
-          <div>
-            <h3 className="text-2xl font-bold">🎨 {modoEdicion ? 'Editar' : 'Agregar'} Diseño</h3>
-            <p className="text-purple-100 mt-1">
-              {modoEdicion ? 'Actualizar diseño existente' : 'Nuevo diseño arquitectónico, interior o mueble'}
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              setMostrarModalDiseno(false)
-              setModoEdicion(false)
-              setDisenoEditando(null)
-              setNuevoDiseno({
-                titulo: '',
-                descripcion: '',
-                categoria: '',
-                año_diseno: new Date().getFullYear(),
-                cliente_tipo: '',
-                mostrar_publico: true,
-                orden_display: 0,
-                tags: []
-              })
-            }}
-            className="text-white hover:text-red-200 text-2xl transition-colors"
-          >
-            ✖️
-          </button>
-        </div>
-      </div>
+        {mostrarModalDiseno && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header del Modal */}
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 text-white rounded-t-2xl">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-2xl font-bold">🎨 {modoEdicion ? 'Editar' : 'Agregar'} Diseño</h3>
+                    <p className="text-purple-100 mt-1">
+                      {modoEdicion ? 'Actualizar diseño existente' : 'Nuevo diseño arquitectónico, interior o mueble'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setMostrarModalDiseno(false)
+                      setModoEdicion(false)
+                      setDisenoEditando(null)
+                      setNuevoDiseno({
+                        titulo: '',
+                        descripcion: '',
+                        categoria: '',
+                        año_diseno: new Date().getFullYear(),
+                        cliente_tipo: '',
+                        mostrar_publico: true,
+                        orden_display: 0,
+                        tags: []
+                      })
+                    }}
+                    className="text-white hover:text-red-200 text-2xl transition-colors"
+                  >
+                    ✖️
+                  </button>
+                </div>
+              </div>
       
       {/* Contenido del Modal */}
       <div className="p-6">
